@@ -19,10 +19,17 @@ func main() {
 		port         = flag.String("listen", ":8080", "Listening address")
 		baseURL      = flag.String("baseURL", "http://localhost:8080", "Base URL for universe")
 		pollInterval = flag.Duration("chef.interval", 5*time.Minute, "Interval in seconds to poll for cookbook updates.")
+		skipSSL      = flag.Bool("skip-ssl", true, "Turn off Chef Server SSL verification")
 	)
 	flag.Parse()
 
-	mart := minimart.NewMinimart(*chefServer, *chefPEM, *chefClient, *baseURL)
+	mart := minimart.NewMinimart(&minimart.Config{
+		ChefServer: *chefServer,
+		ChefPEM:    *chefPEM,
+		ChefClient: *chefClient,
+		BaseURL:    *baseURL,
+		SkipSSL:    *skipSSL,
+	})
 
 	log.Printf("Chef server connected!")
 

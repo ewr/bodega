@@ -39,18 +39,26 @@ type Minimart struct {
 	pollMutex sync.RWMutex
 }
 
-func NewMinimart(chefServer, chefPEM, chefClient, baseURL string) *Minimart {
+type Config struct {
+    ChefServer string
+    ChefPEM string
+    ChefClient string
+    BaseURL string
+    SkipSSL bool
+}
+
+func NewMinimart(config *Config) *Minimart {
 	// read PEM file
-	key, err := ioutil.ReadFile(chefPEM)
+	key, err := ioutil.ReadFile(config.ChefPEM)
 	if err != nil {
 		fmt.Println("Couldn't read key.pem:", err)
 		os.Exit(1)
 	}
 
 	client, err := chef.NewClient(&chef.Config{
-		Name:    chefClient,
+		Name:    config.ChefClient,
 		Key:     string(key),
-		BaseURL: chefServer,
+		BaseURL: config.ChefServer,
 		SkipSSL: true,
 	})
 
@@ -61,8 +69,8 @@ func NewMinimart(chefServer, chefPEM, chefClient, baseURL string) *Minimart {
 	//client.SSLNoVerify = true
 
 	return &Minimart{
-		baseURL:    baseURL,
-		chefServer: chefServer,
+		baseURL:    config.BaseURL,
+		chefServer: config.ChefServer,
 		client:     client,
 		ticker:     nil,
 		tickerDone: make(chan struct{}),
