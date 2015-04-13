@@ -3,7 +3,11 @@ package minimart
 import (
 	_ "archive/tar"
 	"bytes"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
+	_ "errors"
 	"fmt"
 	_ "github.com/ctdk/goiardi/cookbook"
 	_ "github.com/go-chef/chef"
@@ -13,27 +17,30 @@ import (
 	"net/http"
 	"sync"
 	"time"
-    "crypto/rsa"
-	"encoding/pem"
-	"crypto/x509"
-    "errors"
+    "strings"
 )
 
 type ProxyCookbookVersion struct {
-	LocationPath string            `json:"location_path"`
-	LocationType string            `json:"location_type"`
-	Dependencies map[string]string `json:"dependencies"`
-	CookbookVersion     *chef.CookbookVersion     `json:"-"`
+	LocationPath    string                `json:"location_path"`
+	LocationType    string                `json:"location_type"`
+	Dependencies    map[string]string     `json:"dependencies"`
+	CookbookVersion *chef.CookbookVersion `json:"-"`
 }
 
 type UniverseHandler struct {
 	chef *Minimart
 }
 
-type Minimart struct {
-	baseURL string
+type CookbookHandler struct {
+	chef *Minimart
+}
 
+type Minimart struct {
+    Config *Config
+
+	baseURL string
 	cookbooks  map[string]map[string]*ProxyCookbookVersion
+
 	chefServer string
 	client     *chef.Chef
 	ticker     *time.Ticker
@@ -44,16 +51,16 @@ type Minimart struct {
 
 // Config is used to pass configuration options into the NewMinimart() constructor.
 type Config struct {
-    // URI to the Chef Server, with protocol and organization path (if required)
-    ChefServer string
-    // Path to the file containing the client PEM
-    ChefPEM string
-    // Name of the Chef client
-    ChefClient string
-    // Base URL to use in the universe endpoint
-    BaseURL string
-    // Disable SSL validation for the Chef server
-    SkipSSL bool
+	// URI to the Chef Server, with protocol and organization path (if required)
+	ChefServer string
+	// Path to the file containing the client PEM
+	ChefPEM string
+	// Name of the Chef client
+	ChefClient string
+	// Base URL to use in the universe endpoint
+	BaseURL string
+	// Disable SSL validation for the Chef server
+	SkipSSL bool
 }
 
 func NewMinimart(config *Config) *Minimart {
@@ -63,26 +70,29 @@ func NewMinimart(config *Config) *Minimart {
 		log.Fatal("Couldn't read key.pem: %v", err)
 	}
 
-    rsaKey, err := keyFromString(key)
+	rsaKey, err := keyFromString(key)
 
-    if err != nil {
-        log.Fatal("Failed to parse key: %v", err)
-    }
+	if err != nil {
+		log.Fatal("Failed to parse key: %v", err)
+	}
 
-    client := &chef.Chef{
-        Url:    config.ChefServer,
-        Key:    rsaKey,
-        UserId: config.ChefClient,
-        SSLNoVerify: config.SkipSSL,
-        Version: "11.6.0",
-    }
+	client := &chef.Chef{
+		Url:         config.ChefServer,
+		Key:         rsaKey,
+		UserId:      config.ChefClient,
+		SSLNoVerify: config.SkipSSL,
+		Version:     "11.6.0",
+	}
 
 	return &Minimart{
+        Config:     config,
+        cookbooks:  make(map[string]map[string]*ProxyCookbookVersion),
 		baseURL:    config.BaseURL,
 		chefServer: config.ChefServer,
 		client:     client,
 		ticker:     nil,
 		tickerDone: make(chan struct{}),
+
 	}
 }
 
@@ -115,128 +125,15 @@ func (c *Minimart) Universe() ([]byte, error) {
 	return json.Marshal(c.cookbooks)
 }
 
-func (c *Minimart) scrapeCookbooks() {
-	// don't poll more than once at the same time
-	c.pollMutex.Lock()
-	defer c.pollMutex.Unlock()
-
-    // We can't use chef.GetCookbooks() because we need to get all cookbook
-    // versions. For now we're duplicating the logic below...
-    all_versions, err := c.getAllCookbooks()
-
-	if err != nil {
-		log.Printf("Error fetching cookbooks: %v", err)
-		return
-	}
-
-	var cookbooks = make(map[string]map[string]*ProxyCookbookVersion)
-
-	for name, cvlist := range all_versions {
-		log.Printf("got cookbook %v", name)
-
-		versions := make(map[string]*ProxyCookbookVersion)
-		for _, v := range cvlist.Versions {
-			cv, ok, err := c.client.GetCookbookVersion(name, v.Version)
-
-			if err != nil {
-				log.Printf("error fetching cookbook version: %v", err)
-				break
-			}
-
-            if !ok {
-                log.Printf("Couldn't find cookbook version: %s/%s", name, v.Version)
-                break
-            }
-
-			versions[v.Version] = &ProxyCookbookVersion{
-				LocationPath: fmt.Sprintf("%s/cookbooks/%s/%s/download", c.baseURL, name, v.Version),
-				LocationType: "supermarket",
-				Dependencies: cv.Metadata.Dependencies,
-				CookbookVersion:     cv,
-			}
-
-			log.Printf("got %v/%v", name, v.Version)
-		}
-
-		cookbooks[name] = versions
-	}
-
-	c.cookbooks = cookbooks
-	log.Printf("Cookbook cache complete.")
-}
-
-func (c *Minimart) getAllCookbooks() (map[string]*chef.Cookbook, error) {
-	resp, err := c.client.Get("cookbooks?num_versions=all")
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(resp.Status)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	resp.Body.Close()
-
-	cookbooks := map[string]*chef.Cookbook{}
-	json.Unmarshal(body, &cookbooks)
-
-	return cookbooks, nil
-}
-
-func (c *Minimart) PollForCookbooks(interval time.Duration) {
-	if c.ticker != nil {
-		log.Fatal("already polling...")
-		return
-	}
-
-	// also fire a poll right now
-	go c.scrapeCookbooks()
-
-	c.ticker = time.NewTicker(interval)
-
-	for {
-		select {
-		case <-c.ticker.C:
-			// run a poll
-			log.Printf("Should poll for cookbooks.")
-		case <-c.tickerDone:
-			log.Printf("Should stop polling.")
-			c.ticker.Stop()
-			return
-		}
-	}
-}
-
-func (c *Minimart) StopPollingForCookbooks() {
-	c.tickerDone <- struct{}{}
-}
-
-func (c *Minimart) CreateCookbookVersionTarball(name, version string) (*bytes.Buffer, error) {
+func (c *Minimart) CreateCookbookVersionTarball(name, version string) (*bytes.Reader, error) {
 	// Make sure we know this version
 	if c.cookbooks[name] == nil || c.cookbooks[name][version] == nil {
 		return nil, fmt.Errorf("Cookbook version not found: %s/%s", name, version)
 	}
 
-	buf := new(bytes.Buffer)
+    fetch := c.NewCookbookTarballFetch(name,version,c.cookbooks[name][version].CookbookVersion,c.Config.SkipSSL)
 
-	cookbook := c.cookbooks[name][version].CookbookVersion
-
-	// basically we have to iterate each file in the cookbook, adding them
-	// into a tar as we get them. We then gzip that and send it along.
-    sections := [][]struct {chef.CookbookItem}{cookbook.Files, cookbook.Templates, cookbook.Recipes, cookbook.Attributes, cookbook.Definitions, cookbook.Libraries, cookbook.Providers, cookbook.Resources, cookbook.RootFiles}
-
-    for _, section := range sections {
-        log.Printf("Section is %v", section)
-    	for _, file := range section {
-    		log.Printf("Cookbook file is %s - %s", file.Name, file.Path)
-    	}
-    }
-
-	return buf, nil
+    return fetch.Run()
 }
 
 //----------
@@ -249,5 +146,27 @@ func (h *UniverseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+    w.Header().Set("Content-type","application/json")
+
 	w.Write(json)
+}
+
+//----------
+
+func (h *CookbookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// ghetto matcher for the MVP!
+	parts := strings.Split(r.URL.Path, "/")
+	log.Printf("parts is %v", parts)
+	buf, err := h.chef.CreateCookbookVersionTarball(parts[2], parts[3])
+    log.Printf("buf len is %v", buf.Len())
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%v", err), 500)
+		return
+	}
+
+    w.Header().Set("Content-type","application/octet-stream")
+
+	// FIXME: I'm sure we need some headers, etc
+	buf.WriteTo(w)
 }
