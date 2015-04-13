@@ -3,7 +3,7 @@ package main
 import (
 	_ "archive/tar"
 	"flag"
-	"github.com/ewr/minimart/minimart"
+	"github.com/ewr/minimart/chef-minimart"
 	"log"
 	"net/http"
 	"time"
