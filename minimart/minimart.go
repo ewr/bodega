@@ -15,9 +15,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
-    "strings"
 )
 
 type ProxyCookbookVersion struct {
@@ -36,10 +36,10 @@ type CookbookHandler struct {
 }
 
 type Minimart struct {
-    Config *Config
+	Config *Config
 
-	baseURL string
-	cookbooks  map[string]map[string]*ProxyCookbookVersion
+	baseURL   string
+	cookbooks map[string]map[string]*ProxyCookbookVersion
 
 	chefServer string
 	client     *chef.Chef
@@ -85,14 +85,13 @@ func NewMinimart(config *Config) *Minimart {
 	}
 
 	return &Minimart{
-        Config:     config,
-        cookbooks:  make(map[string]map[string]*ProxyCookbookVersion),
+		Config:     config,
+		cookbooks:  make(map[string]map[string]*ProxyCookbookVersion),
 		baseURL:    config.BaseURL,
 		chefServer: config.ChefServer,
 		client:     client,
 		ticker:     nil,
 		tickerDone: make(chan struct{}),
-
 	}
 }
 
@@ -131,9 +130,9 @@ func (c *Minimart) CreateCookbookVersionTarball(name, version string) (*bytes.Re
 		return nil, fmt.Errorf("Cookbook version not found: %s/%s", name, version)
 	}
 
-    fetch := c.NewCookbookTarballFetch(name,version,c.cookbooks[name][version].CookbookVersion,c.Config.SkipSSL)
+	fetch := c.NewCookbookTarballFetch(name, version, c.cookbooks[name][version].CookbookVersion, c.Config.SkipSSL)
 
-    return fetch.Run()
+	return fetch.Run()
 }
 
 //----------
@@ -146,7 +145,7 @@ func (h *UniverseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    w.Header().Set("Content-type","application/json")
+	w.Header().Set("Content-type", "application/json")
 
 	w.Write(json)
 }
@@ -158,14 +157,14 @@ func (h *CookbookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.URL.Path, "/")
 	log.Printf("parts is %v", parts)
 	buf, err := h.chef.CreateCookbookVersionTarball(parts[2], parts[3])
-    log.Printf("buf len is %v", buf.Len())
+	log.Printf("buf len is %v", buf.Len())
 
 	if err != nil {
 		http.Error(w, fmt.Sprintf("%v", err), 500)
 		return
 	}
 
-    w.Header().Set("Content-type","application/octet-stream")
+	w.Header().Set("Content-type", "application/octet-stream")
 
 	// FIXME: I'm sure we need some headers, etc
 	buf.WriteTo(w)

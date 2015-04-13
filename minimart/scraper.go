@@ -27,7 +27,7 @@ func (c *Minimart) PollForCookbooks(interval time.Duration) {
 		case <-c.ticker.C:
 			// run a poll
 			log.Printf("Should poll for cookbooks.")
-            c.scrapeCookbooks()
+			c.scrapeCookbooks()
 		case <-c.tickerDone:
 			log.Printf("Should stop polling.")
 			c.ticker.Stop()
@@ -61,15 +61,15 @@ func (c *Minimart) scrapeCookbooks() {
 	for name, cvlist := range all_versions {
 		log.Printf("got cookbook %v", name)
 
-        if c.cookbooks[name] == nil {
-            c.cookbooks[name] = make(map[string]*ProxyCookbookVersion)
-        }
+		if c.cookbooks[name] == nil {
+			c.cookbooks[name] = make(map[string]*ProxyCookbookVersion)
+		}
 
 		for _, v := range cvlist.Versions {
-            if c.cookbooks[name][v.Version] != nil {
-                log.Printf("Skipping known cookbook version %s/%s", name, v.Version)
-                continue
-            }
+			if c.cookbooks[name][v.Version] != nil {
+				log.Printf("Skipping known cookbook version %s/%s", name, v.Version)
+				continue
+			}
 
 			cv, ok, err := c.client.GetCookbookVersion(name, v.Version)
 
