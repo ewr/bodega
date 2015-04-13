@@ -25,7 +25,7 @@ Supermarket instance is more than you need, Minimart may be for you.
 
 `go get github.com/ewr/minimart`
 
-`chef-minimart --help`
+`minimart --help`
 
 Command flags:
 
