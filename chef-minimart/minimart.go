@@ -130,7 +130,15 @@ func (c *Minimart) CreateCookbookVersionTarball(name, version string) (*bytes.Re
 		return nil, fmt.Errorf("Cookbook version not found: %s/%s", name, version)
 	}
 
-	fetch := c.NewCookbookTarballFetch(name, version, c.cookbooks[name][version].CookbookVersion, c.Config.SkipSSL)
+    // even though we have a cached CookbookVersion, we need to fetch again
+    // to get unexpired access credentials to Bookshelf
+    cv, ok, err := c.client.GetCookbookVersion(name, version)
+
+    if err != nil || !ok {
+        return nil, fmt.Errorf("Failed to fetch cookbook version for: %s/%s (%s)", name, version, err)
+    }
+
+	fetch := c.NewCookbookTarballFetch(name, version, cv, c.Config.SkipSSL)
 
 	return fetch.Run()
 }
