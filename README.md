@@ -10,6 +10,11 @@
 
 _For when you don't need a whole [Supermarket](https://supermarket.chef.io)..._
 
+__May 12, 2015:__ I just ran across another [MiniMart](http://electric-it.github.io/minimart/), 
+a RubyGem that attempts to solve a similar problem by generating a static cache of universe 
+and cookbook downloads. They started their project before I started this one, so I'll be 
+renaming this project soon.
+
 # What?
 
 Minimart is intended to be a light proxy in front of Chef Server, offering a
