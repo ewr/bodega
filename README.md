@@ -1,19 +1,14 @@
 ---
-     ___ ___  ____  ____   ____  ___ ___   ____  ____  ______
-    |   |   ||    ||    \ |    ||   |   | /    ||    \|      |
-    | _   _ | |  | |  _  | |  | | _   _ ||  o  ||  D  )      |
-    |  \_/  | |  | |  |  | |  | |  \_/  ||     ||    /|_|  |_|
-    |   |   | |  | |  |  | |  | |   |   ||  _  ||    \  |  |
-    |   |   | |  | |  |  | |  | |   |   ||  |  ||  .  \ |  |
-    |___|___||____||__|__||____||___|___||__|__||__|\_| |__|
+     _______  _______  ______   _______  _______  _______
+    |  _    ||       ||      | |       ||       ||   _   |
+    | |_|   ||   _   ||  _    ||    ___||    ___||  |_|  |
+    |       ||  | |  || | |   ||   |___ |   | __ |       |
+    |  _   | |  |_|  || |_|   ||    ___||   ||  ||       |
+    | |_|   ||       ||       ||   |___ |   |_| ||   _   |
+    |_______||_______||______| |_______||_______||__| |__|
 ---
 
 _For when you don't need a whole [Supermarket](https://supermarket.chef.io)..._
-
-__May 12, 2015:__ I just ran across another [MiniMart](http://electric-it.github.io/minimart/), 
-a RubyGem that attempts to solve a similar problem by generating a static cache of universe 
-and cookbook downloads. They started their project before I started this one, so I'll be 
-renaming this project soon.
 
 # What?
 
