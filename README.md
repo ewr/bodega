@@ -23,7 +23,7 @@ Supermarket instance is more than you need, Bodega may be for you.
 
 # How
 
-`go get github.com/ewr/chef-bodega`
+`go get github.com/ewr/bodega`
 
 `bodega --help`
 
