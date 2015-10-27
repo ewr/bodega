@@ -25,7 +25,7 @@ Supermarket instance is more than you need, Bodega may be for you.
 
 `go get github.com/ewr/chef-bodega`
 
-`chef-bodega --help`
+`bodega --help`
 
 Command flags:
 
