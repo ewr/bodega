@@ -17,20 +17,20 @@ renaming this project soon.
 
 # What?
 
-Minimart is intended to be a light proxy in front of Chef Server, offering a
+Bodega is intended to be a light proxy in front of Chef Server, offering a
 Berkshelf `/universe` endpoint and proxied cookbook downloads.
 
 # Why?
 
 If you just want to be able to resolve your internal cookbooks without
 providing Chef Server credentials to everyone, but standing up a full
-Supermarket instance is more than you need, Minimart may be for you.
+Supermarket instance is more than you need, Bodega may be for you.
 
 # How
 
-`go get github.com/ewr/minimart`
+`go get github.com/ewr/chef-bodega`
 
-`minimart --help`
+`chef-bodega --help`
 
 Command flags:
 
@@ -56,7 +56,15 @@ untrusted users.
 * Concurrent fetches for cookbook version info?
 * Cache cookbook tarballs?
 
+# An Alternate Approach
+
+This tool was renamed Bodega after a naming collision with
+[Minimart](https://github.com/electric-it/minimart), another tool that
+attempts to solve the Supermarket-lite use case. Minimart creates a static
+representation of the cookbook tree, so it may better support uses with lots
+of download traffic.
+
 # Who
 
-Minimart was written by [Eric Richardson](http://ewr.is), to scratch an
+Bodega was written by [Eric Richardson](http://ewr.is), to scratch an
 itch felt at [Southern California Public Radio](http://www.scpr.org).

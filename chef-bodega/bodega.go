@@ -1,4 +1,4 @@
-package minimart
+package bodega
 
 import (
 	_ "archive/tar"
@@ -21,6 +21,7 @@ import (
 )
 
 type ProxyCookbookVersion struct {
+	DownloadURL     string                `json:"download_url"`
 	LocationPath    string                `json:"location_path"`
 	LocationType    string                `json:"location_type"`
 	Dependencies    map[string]string     `json:"dependencies"`
@@ -28,14 +29,14 @@ type ProxyCookbookVersion struct {
 }
 
 type UniverseHandler struct {
-	chef *Minimart
+	chef *Bodega
 }
 
 type CookbookHandler struct {
-	chef *Minimart
+	chef *Bodega
 }
 
-type Minimart struct {
+type Bodega struct {
 	Config *Config
 
 	baseURL   string
@@ -49,7 +50,7 @@ type Minimart struct {
 	pollMutex sync.RWMutex
 }
 
-// Config is used to pass configuration options into the NewMinimart() constructor.
+// Config is used to pass configuration options into the NewBodega() constructor.
 type Config struct {
 	// URI to the Chef Server, with protocol and organization path (if required)
 	ChefServer string
@@ -63,7 +64,7 @@ type Config struct {
 	SkipSSL bool
 }
 
-func NewMinimart(config *Config) *Minimart {
+func NewBodega(config *Config) *Bodega {
 	// read PEM file
 	key, err := ioutil.ReadFile(config.ChefPEM)
 	if err != nil {
@@ -84,7 +85,7 @@ func NewMinimart(config *Config) *Minimart {
 		Version:     "11.6.0",
 	}
 
-	return &Minimart{
+	return &Bodega{
 		Config:     config,
 		cookbooks:  make(map[string]map[string]*ProxyCookbookVersion),
 		baseURL:    config.BaseURL,
@@ -108,35 +109,35 @@ func keyFromString(key []byte) (*rsa.PrivateKey, error) {
 	return rsaKey, nil
 }
 
-func (c *Minimart) NewUniverseHandler() *UniverseHandler {
+func (c *Bodega) NewUniverseHandler() *UniverseHandler {
 	return &UniverseHandler{
 		chef: c,
 	}
 }
 
-func (c *Minimart) NewCookbookHandler() *CookbookHandler {
+func (c *Bodega) NewCookbookHandler() *CookbookHandler {
 	return &CookbookHandler{
 		chef: c,
 	}
 }
 
-func (c *Minimart) Universe() ([]byte, error) {
+func (c *Bodega) Universe() ([]byte, error) {
 	return json.Marshal(c.cookbooks)
 }
 
-func (c *Minimart) CreateCookbookVersionTarball(name, version string) (*bytes.Reader, error) {
+func (c *Bodega) CreateCookbookVersionTarball(name, version string) (*bytes.Reader, error) {
 	// Make sure we know this version
 	if c.cookbooks[name] == nil || c.cookbooks[name][version] == nil {
 		return nil, fmt.Errorf("Cookbook version not found: %s/%s", name, version)
 	}
 
-    // even though we have a cached CookbookVersion, we need to fetch again
-    // to get unexpired access credentials to Bookshelf
-    cv, ok, err := c.client.GetCookbookVersion(name, version)
+	// even though we have a cached CookbookVersion, we need to fetch again
+	// to get unexpired access credentials to Bookshelf
+	cv, ok, err := c.client.GetCookbookVersion(name, version)
 
-    if err != nil || !ok {
-        return nil, fmt.Errorf("Failed to fetch cookbook version for: %s/%s (%s)", name, version, err)
-    }
+	if err != nil || !ok {
+		return nil, fmt.Errorf("Failed to fetch cookbook version for: %s/%s (%s)", name, version, err)
+	}
 
 	fetch := c.NewCookbookTarballFetch(name, version, cv, c.Config.SkipSSL)
 

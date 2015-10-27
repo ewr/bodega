@@ -1,4 +1,4 @@
-package minimart
+package bodega
 
 import (
 	"archive/tar"
@@ -32,7 +32,7 @@ type CookbookFetch struct {
 	client *http.Client
 }
 
-func (c *Minimart) NewCookbookTarballFetch(name, version string, cookbook *chef.CookbookVersion, skipSSL bool) *CookbookFetch {
+func (c *Bodega) NewCookbookTarballFetch(name, version string, cookbook *chef.CookbookVersion, skipSSL bool) *CookbookFetch {
 	return &CookbookFetch{
 		Name:     name,
 		Version:  version,

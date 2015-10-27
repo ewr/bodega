@@ -3,11 +3,13 @@ package main
 import (
 	_ "archive/tar"
 	"flag"
-	"github.com/ewr/minimart/chef-minimart"
+	"github.com/ewr/bodega/chef-bodega"
 	"log"
 	"net/http"
 	"time"
 )
+
+const VERSION string = "1.0.0"
 
 //----------
 
@@ -23,7 +25,7 @@ func main() {
 	)
 	flag.Parse()
 
-	mart := minimart.NewMinimart(&minimart.Config{
+	mart := bodega.NewBodega(&bodega.Config{
 		ChefServer: *chefServer,
 		ChefPEM:    *chefPEM,
 		ChefClient: *chefClient,
@@ -31,7 +33,7 @@ func main() {
 		SkipSSL:    *skipSSL,
 	})
 
-	log.Printf("Chef server connected!")
+	log.Printf("Chef Bodega %s running!", VERSION)
 
 	go mart.PollForCookbooks(*pollInterval)
 
@@ -40,9 +42,9 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
-             <head><title>Minimart</title></head>
+             <head><title>Chef Bodega</title></head>
              <body>
-             <h1>Minimart</h1>
+             <h1>Chef Bodega</h1>
              </body>
              </html>`))
 	})

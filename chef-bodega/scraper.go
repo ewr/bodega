@@ -1,4 +1,4 @@
-package minimart
+package bodega
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func (c *Minimart) PollForCookbooks(interval time.Duration) {
+func (c *Bodega) PollForCookbooks(interval time.Duration) {
 	if c.ticker != nil {
 		log.Fatal("already polling...")
 		return
@@ -38,13 +38,13 @@ func (c *Minimart) PollForCookbooks(interval time.Duration) {
 
 //----------
 
-func (c *Minimart) StopPollingForCookbooks() {
+func (c *Bodega) StopPollingForCookbooks() {
 	c.tickerDone <- struct{}{}
 }
 
 //----------
 
-func (c *Minimart) scrapeCookbooks() {
+func (c *Bodega) scrapeCookbooks() {
 	// don't poll more than once at the same time
 	c.pollMutex.Lock()
 	defer c.pollMutex.Unlock()
@@ -84,6 +84,7 @@ func (c *Minimart) scrapeCookbooks() {
 			}
 
 			c.cookbooks[name][v.Version] = &ProxyCookbookVersion{
+				DownloadURL:     fmt.Sprintf("%s/cookbooks/%s/%s/download", c.baseURL, name, v.Version),
 				LocationPath:    fmt.Sprintf("%s/cookbooks/%s/%s/download", c.baseURL, name, v.Version),
 				LocationType:    "uri",
 				Dependencies:    cv.Metadata.Dependencies,
@@ -99,7 +100,7 @@ func (c *Minimart) scrapeCookbooks() {
 
 //----------
 
-func (c *Minimart) getAllCookbooks() (map[string]*chef.Cookbook, error) {
+func (c *Bodega) getAllCookbooks() (map[string]*chef.Cookbook, error) {
 	resp, err := c.client.Get("cookbooks?num_versions=all")
 	if err != nil {
 		return nil, err
